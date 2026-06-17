@@ -51,33 +51,26 @@ spec:
             - selector: auth.identity.metadata.name
               operator: neq
               value: ""
-      # /api/write -> role 'writer' (admin keys also carry 'writer').
+      # Roles are a comma-separated list in the kuadrant.io/groups annotation.
+      # OPA splits it into a real array so membership is exact (the `incl`
+      # operator treats a string selector as a single-element array, which
+      # breaks multi-role keys like the admin key's "admin,writer").
+      # /api/write -> role 'writer' (the admin key carries 'writer' too).
       writer-paths:
         when:
           - predicate: "request.method == 'POST' && request.path.startsWith('/api/write')"
-        patternMatching:
-          patterns:
-            - selector: auth.identity.metadata.annotations.kuadrant\.io/groups
-              operator: incl
-              value: writer
+        opa:
+          rego: |
+            groups := split(object.get(input.auth.identity.metadata.annotations, "kuadrant.io/groups", ""), ",")
+            allow { groups[_] == "writer" }
       # /api/admin -> role 'admin' (any method, including DELETE).
       admin-paths:
         when:
           - predicate: "request.path.startsWith('/api/admin')"
-        patternMatching:
-          patterns:
-            - selector: auth.identity.metadata.annotations.kuadrant\.io/groups
-              operator: incl
-              value: admin
-      # ---- Multi-role alternative (production) ----
-      # Replace a patternMatching rule above with OPA to match a parsed list
-      # rather than a substring, e.g.:
-      #   admin-paths:
-      #     when: [ { predicate: "request.path.startsWith('/api/admin')" } ]
-      #     opa:
-      #       rego: |
-      #         groups := split(input.auth.identity.metadata.annotations["kuadrant.io/groups"], ",")
-      #         allow { groups[_] == "admin" }
+        opa:
+          rego: |
+            groups := split(object.get(input.auth.identity.metadata.annotations, "kuadrant.io/groups", ""), ",")
+            allow { groups[_] == "admin" }
 
     response:
       # On a successful decision, inject the caller's identity into the upstream
