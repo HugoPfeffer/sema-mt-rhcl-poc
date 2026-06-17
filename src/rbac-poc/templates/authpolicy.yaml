@@ -24,6 +24,11 @@ spec:
     authentication:
       api-key-users:
         apiKey:
+          # Kuadrant generates the Authorino AuthConfig in the kuadrant-system
+          # namespace, so Authorino must search ALL namespaces to find these
+          # Secrets (which live in the app's namespace, rbac-poc). Without this,
+          # every key reads as invalid (401). Authorino is clusterWide=true.
+          allNamespaces: true
           # Selects the role-carrying Secrets created by apikey-secrets.yaml.
           selector:
             matchLabels:
