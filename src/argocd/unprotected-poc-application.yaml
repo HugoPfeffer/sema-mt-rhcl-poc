@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: unprotected-poc
+  namespace: openshift-gitops
+  labels:
+    app.kubernetes.io/part-of: rhcl-unprotected-poc
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/HugoPfeffer/sema-mt-rhcl-poc.git
+    targetRevision: main
+    path: src/unprotected-poc
+    helm:
+      valuesObject:
+        route:
+          host: unprotected-api.apps.cluster-rhcl-poc.rhcl-poc.sandbox3759.opentlc.com
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: unprotected-poc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

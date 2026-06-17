@@ -1,0 +1,21 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "unprotected-poc.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "unprotected-poc.labels" . | nindent 4 }}
+spec:
+  # Public hostname on the OpenShift router wildcard (always resolvable). This is
+  # the entire external exposure path — no Istio gateway, no Kuadrant AuthPolicy.
+  host: {{ .Values.route.host | quote }}
+  to:
+    kind: Service
+    name: {{ include "unprotected-poc.name" . }}
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: {{ .Values.route.tlsTermination }}
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

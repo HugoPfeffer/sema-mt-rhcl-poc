@@ -1,0 +1,32 @@
+# Unprotected sample API — clone of rbac-poc with every Kuadrant/Istio/gateway
+# touchpoint removed. Exposed directly through the OpenShift router (apps domain),
+# which always resolves — no dependency on the rhcl gateway DNS zone.
+
+# OpenShift Route exposing the API to the web (no RHCL in the path).
+route:
+  # Must fall under the OpenShift router's wildcard (*.apps.<cluster-domain>),
+  # which is covered by the default ingress cert.
+  host: unprotected-api.apps.cluster-rhcl-poc.rhcl-poc.sandbox3759.opentlc.com
+  # edge: the router terminates TLS with its default wildcard cert; the backend
+  # is plain HTTP on :8080.
+  tlsTermination: edge
+
+# Container image. By default the image is built in-cluster via the S2I
+# BuildConfig below and pulled from the internal registry. To use a prebuilt
+# image instead, set image.repository and build.enabled=false.
+image:
+  repository: ""        # empty => use the internal-registry image from the BuildConfig
+  tag: latest
+  pullPolicy: Always
+
+# In-cluster Source-to-Image build (no external registry / credentials needed).
+# Reuses the exact same app source as rbac-poc — same endpoints, no enforcement.
+build:
+  enabled: true
+  git:
+    uri: https://github.com/HugoPfeffer/sema-mt-rhcl-poc.git
+    ref: main
+    contextDir: src/apps/rbac-sample-api
+  builderImage: nodejs:20-ubi9   # ImageStreamTag in the 'openshift' namespace
+
+replicaCount: 1

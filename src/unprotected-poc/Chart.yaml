@@ -1,0 +1,15 @@
+apiVersion: v2
+name: unprotected-poc
+description: >-
+  Unprotected sample API (NO RHCL) — a functionally identical clone of the
+  rbac-poc sample API, exposed directly via an OpenShift Route with no Kuadrant
+  AuthPolicy and no Istio gateway. Contrast workload that highlights what Red Hat
+  Connectivity Link adds: same code, same endpoints, but wide open.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - rhcl
+  - unprotected
+  - contrast
+  - openshift-route
