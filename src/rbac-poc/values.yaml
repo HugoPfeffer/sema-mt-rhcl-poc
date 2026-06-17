@@ -61,3 +61,9 @@ trafficGenerator:
   enabled: true
   image: registry.access.redhat.com/ubi9/ubi:latest
   intervalSeconds: 2
+
+# Scrape the app's Istio sidecar into user-workload-monitoring so its metrics
+# carry mesh_id=ossm-3 — required for the workload's traffic to appear in Kiali.
+monitoring:
+  podMonitor:
+    enabled: true
