@@ -6,6 +6,9 @@ host: rbac-api.rhcl.sandbox3759.opentlc.com
 gateway:
   name: prod-web
   namespace: ingress-gateway
+  # Istio names the backing Service "<gateway-name>-istio". Used by the
+  # in-cluster traffic generator to reach the gateway directly.
+  service: prod-web-istio
 
 # Container image. By default the image is built in-cluster via the S2I
 # BuildConfig below and pulled from the internal registry. To use a prebuilt

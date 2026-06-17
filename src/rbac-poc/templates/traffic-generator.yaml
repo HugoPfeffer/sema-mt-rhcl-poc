@@ -37,7 +37,7 @@ spec:
             - name: HOST
               value: {{ .Values.host | quote }}
             - name: GW
-              value: {{ printf "%s.%s.svc.cluster.local" .Values.gateway.name .Values.gateway.namespace | quote }}
+              value: {{ printf "%s.%s.svc.cluster.local" .Values.gateway.service .Values.gateway.namespace | quote }}
             - name: INTERVAL
               value: {{ .Values.trafficGenerator.intervalSeconds | quote }}
           command: ["/bin/sh", "-c"]
