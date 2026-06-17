@@ -1,0 +1,52 @@
+# Hostname for the sample API's HTTPRoute. Must fall under the prod-web gateway's
+# wildcard cert (*.rhcl.sandbox3759.opentlc.com).
+host: rbac-api.rhcl.sandbox3759.opentlc.com
+
+# Gateway (gateway.networking.k8s.io) the HTTPRoute attaches to.
+gateway:
+  name: prod-web
+  namespace: ingress-gateway
+
+# Container image. By default the image is built in-cluster via the S2I
+# BuildConfig below and pulled from the internal registry. To use a prebuilt
+# image instead, set image.repository and build.enabled=false.
+image:
+  repository: ""        # empty => use the internal-registry image from the BuildConfig
+  tag: latest
+  pullPolicy: Always
+
+# In-cluster Source-to-Image build (no external registry / credentials needed).
+build:
+  enabled: true
+  git:
+    uri: https://github.com/HugoPfeffer/sema-mt-rhcl-poc.git
+    ref: main
+    contextDir: src/apps/rbac-sample-api
+  builderImage: nodejs:20-ubi9   # ImageStreamTag in the 'openshift' namespace
+
+replicaCount: 1
+
+# ---------------------------------------------------------------------------
+# DEMO-ONLY API keys. NEVER put real credentials here — TruffleHog (pre-commit
+# + CI) will block verified secrets, and committed keys are not secret.
+#
+# `groups` is a comma-separated role list. The AuthPolicy checks role membership
+# with the `incl` operator (a substring/containment check), which is exact
+# enough for these non-overlapping role tokens. Roles are hierarchical: the
+# admin key also carries `writer`, so the admin role is a superset of writer.
+# For production multi-role logic, switch the authorization rules to OPA/Rego
+# (see templates/authpolicy.yaml notes).
+# ---------------------------------------------------------------------------
+apiKeys:
+  admin:
+    key: demo-admin-key-do-not-use
+    username: alice-admin
+    groups: "admin,writer"
+  writer:
+    key: demo-writer-key-do-not-use
+    username: bob-writer
+    groups: "writer"
+  reader:
+    key: demo-reader-key-do-not-use
+    username: carol-reader
+    groups: "reader"

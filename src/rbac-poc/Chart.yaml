@@ -1,0 +1,15 @@
+apiVersion: v2
+name: rbac-poc
+description: >-
+  RHCL (Kuadrant) RBAC PoC — a sample API whose endpoints are protected by
+  API-key, role-based access control enforced at the gateway by Red Hat
+  Connectivity Link (AuthPolicy + Authorino).
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - kuadrant
+  - rhcl
+  - authpolicy
+  - rbac
+  - gateway-api

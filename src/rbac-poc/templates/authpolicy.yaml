@@ -1,0 +1,104 @@
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: {{ include "rbac-poc.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rbac-poc.labels" . | nindent 4 }}
+spec:
+  # Attach RBAC to the app's own HTTPRoute (app-specific rules belong with the
+  # route, not the shared prod-web gateway). A Gateway-attached policy with
+  # spec.defaults/spec.overrides is the right tool for a platform-wide
+  # "require auth everywhere" baseline — see README.
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: {{ include "rbac-poc.name" . }}
+
+  # The entire policy is inactive for /public, so that endpoint stays anonymous.
+  when:
+    - predicate: "!request.path.startsWith('/public')"
+
+  rules:
+    # ---- AUTHENTICATION: API key in `Authorization: APIKEY <key>` ----
+    authentication:
+      api-key-users:
+        apiKey:
+          # Selects the role-carrying Secrets created by apikey-secrets.yaml.
+          selector:
+            matchLabels:
+              app: {{ include "rbac-poc.name" . }}
+        credentials:
+          authorizationHeader:
+            prefix: APIKEY
+
+    # ---- AUTHORIZATION: role required, scoped per path + method ----
+    # For API keys the resolved identity IS the Kubernetes Secret, so roles are
+    # read from its annotations. `incl` is a containment check against the
+    # comma-separated groups string (exact for these non-overlapping tokens).
+    authorization:
+      # /api/read -> any successfully authenticated identity (no specific role).
+      read-paths:
+        when:
+          - predicate: "request.method == 'GET' && request.path.startsWith('/api/read')"
+        patternMatching:
+          patterns:
+            - selector: auth.identity.metadata.name
+              operator: neq
+              value: ""
+      # /api/write -> role 'writer' (admin keys also carry 'writer').
+      writer-paths:
+        when:
+          - predicate: "request.method == 'POST' && request.path.startsWith('/api/write')"
+        patternMatching:
+          patterns:
+            - selector: auth.identity.metadata.annotations.kuadrant\.io/groups
+              operator: incl
+              value: writer
+      # /api/admin -> role 'admin' (any method, including DELETE).
+      admin-paths:
+        when:
+          - predicate: "request.path.startsWith('/api/admin')"
+        patternMatching:
+          patterns:
+            - selector: auth.identity.metadata.annotations.kuadrant\.io/groups
+              operator: incl
+              value: admin
+      # ---- Multi-role alternative (production) ----
+      # Replace a patternMatching rule above with OPA to match a parsed list
+      # rather than a substring, e.g.:
+      #   admin-paths:
+      #     when: [ { predicate: "request.path.startsWith('/api/admin')" } ]
+      #     opa:
+      #       rego: |
+      #         groups := split(input.auth.identity.metadata.annotations["kuadrant.io/groups"], ",")
+      #         allow { groups[_] == "admin" }
+
+    response:
+      # On a successful decision, inject the caller's identity into the upstream
+      # request so the sample app can echo *who* RHCL authenticated.
+      success:
+        headers:
+          x-auth-username:
+            plain:
+              selector: auth.identity.metadata.annotations.kuadrant\.io/username
+          x-auth-groups:
+            plain:
+              selector: auth.identity.metadata.annotations.kuadrant\.io/groups
+      # Custom denials make the demo unambiguous.
+      unauthenticated:
+        code: 401
+        message:
+          value: "RHCL PoC: missing or invalid API key"
+        headers:
+          x-rhcl-denied-by:
+            value: "authorino-apikey"
+      unauthorized:
+        code: 403
+        message:
+          value: "RHCL PoC: your role does not permit this operation"
+        headers:
+          x-rhcl-denied-by:
+            value: "authorino-rbac"
+        body:
+          value: '{"error":"forbidden","reason":"insufficient_role","policy":"rbac-sample-api"}'

@@ -1,0 +1,12 @@
+{{- if .Values.build.enabled }}
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: {{ include "rbac-poc.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rbac-poc.labels" . | nindent 4 }}
+spec:
+  lookupPolicy:
+    local: true
+{{- end }}

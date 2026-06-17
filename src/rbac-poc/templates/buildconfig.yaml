@@ -1,0 +1,30 @@
+{{- if .Values.build.enabled }}
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: {{ include "rbac-poc.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rbac-poc.labels" . | nindent 4 }}
+spec:
+  source:
+    type: Git
+    git:
+      uri: {{ .Values.build.git.uri | quote }}
+      ref: {{ .Values.build.git.ref | quote }}
+    contextDir: {{ .Values.build.git.contextDir | quote }}
+  strategy:
+    type: Source
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        namespace: openshift
+        name: {{ .Values.build.builderImage | quote }}
+  output:
+    to:
+      kind: ImageStreamTag
+      name: {{ include "rbac-poc.name" . }}:{{ .Values.image.tag }}
+  triggers:
+    # ConfigChange triggers an initial build when ArgoCD first creates this BuildConfig.
+    - type: ConfigChange
+{{- end }}

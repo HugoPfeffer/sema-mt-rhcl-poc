@@ -1,0 +1,16 @@
+{
+  "name": "rbac-sample-api",
+  "version": "1.0.0",
+  "description": "Sample API for the RHCL RBAC PoC — endpoints with varying access levels enforced by Red Hat Connectivity Link.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "license": "Apache-2.0"
+}
