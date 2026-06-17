@@ -13,13 +13,36 @@ A devcontainer base template for spinning up isolated, AI-native development san
 
 ## Target OpenShift Cluster
 
-The `oc`/`kubectl`/Helm tooling and read-only **kubernetes** MCP target an OpenShift cluster with:
+The `oc`/`kubectl`/Helm tooling and read-only **kubernetes** MCP target a live PoC cluster (`cluster-rhcl-poc`, AWS `us-east-2`, 6 amd64 nodes):
 
-- **OpenShift version**: 4.20
+- **OpenShift version**: 4.20.24 (channel `stable-4.20`)
+- **Platform**: AWS (IPI)
 - **GitOps**: ArgoCD via the OpenShift GitOps operator (**RHGitOps**)
-- **Connectivity**: Red Hat Connectivity Link operators installed
+- **Connectivity**: Red Hat Connectivity Link (Kuadrant) — Gateway API policies
 
-Assume these CRDs/APIs are available when reasoning about manifests.
+### Installed Operators (OLM)
+
+| Operator | Version | Purpose |
+| -------- | ------- | ------- |
+| Red Hat Connectivity Link (`rhcl-operator`) | 1.4.0 | Kuadrant control plane — Gateway API policies: `AuthPolicy`, `RateLimitPolicy`, `DNSPolicy`, `TLSPolicy` |
+| Authorino / Limitador / DNS | 1.4.0 | Kuadrant data plane backing auth, rate-limit, and DNS policies |
+| OpenShift Service Mesh 3 (`servicemeshoperator3`) | 3.3.4 | Istio (Sail) — Gateway API provider; Kiali 2.22 for mesh visualization |
+| OpenShift GitOps | 1.20.4 | ArgoCD (RHGitOps) |
+| cert-manager | 1.19.0 | TLS certificate management (backs `TLSPolicy`) |
+| Red Hat Service Interconnect (`skupper`) | 2.0.1 | Cross-site/cluster networking (RHSI) |
+| OpenTelemetry / Tempo / Grafana | — | Observability and distributed tracing |
+
+Assume these CRDs/APIs (Gateway API + Kuadrant policies) are available when reasoning about manifests.
+
+### GitOps Topology (app-of-apps)
+
+ArgoCD runs in the `openshift-gitops` namespace. A root **`bootstrap`** `Application` manages all child apps:
+
+- **Operators/platform**: `operators-system`, `rhcl-operator`, `kuadrant`, `servicemesh-system`, `istio-system`, `ingress-gateway`, `rhsi-system`
+- **Observability**: `observability-hub`, `observability-worker`, `opentelemetrycollector`, `tracing-system`
+- **Sample workloads**: `travel-agency`, `travel-control`, `travel-portal`, `travel-web`, `echo-api`
+
+Mirror this app-of-apps layout under `/workspace/src` when adding workloads — define an `Application`/`ApplicationSet`, package the workload as a Helm chart, and let `bootstrap` (or a parent app) pick it up.
 
 ## Installed Tools
 
