@@ -14,6 +14,11 @@ spec:
     metadata:
       labels:
         {{- include "rbac-poc.labels" . | nindent 8 }}
+        # Kiali groups by app + version; inject the Istio sidecar so the workload
+        # becomes a mesh node and Kiali shows inbound traffic from the gateway
+        # (istio-cni is installed, so this is safe under the restricted-v2 SCC).
+        version: v1
+        sidecar.istio.io/inject: "true"
     spec:
       containers:
         - name: app
