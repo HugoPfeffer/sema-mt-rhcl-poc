@@ -50,3 +50,11 @@ apiKeys:
     key: demo-reader-key-do-not-use
     username: carol-reader
     groups: "reader"
+
+# Optional in-cluster traffic generator — drives a steady mix of authorized and
+# RBAC-denied requests through the gateway so the flows light up in Kiali.
+# Set enabled=false for a quiet cluster once the demo is done.
+trafficGenerator:
+  enabled: true
+  image: registry.access.redhat.com/ubi9/ubi:latest
+  intervalSeconds: 2

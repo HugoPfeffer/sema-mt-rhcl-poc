@@ -1,0 +1,76 @@
+{{- if .Values.trafficGenerator.enabled }}
+# Optional in-cluster traffic generator for the Kiali demo. It drives a steady
+# mix of authorized (2xx) and RBAC-denied (401/403) requests THROUGH the
+# prod-web gateway (so RHCL/Authorino enforces the AuthPolicy and Istio
+# telemetry attributes the flows to rbac-sample-api). Not mesh-injected, so it
+# connects straight to the gateway over TLS. Disable with
+# trafficGenerator.enabled=false.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbac-traffic-generator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rbac-poc.labels" . | nindent 4 }}
+    app: rbac-traffic-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rbac-traffic-generator
+  template:
+    metadata:
+      labels:
+        app: rbac-traffic-generator
+        app.kubernetes.io/part-of: rhcl-rbac-poc
+    spec:
+      containers:
+        - name: generator
+          image: {{ .Values.trafficGenerator.image }}
+          env:
+            - name: READER_KEY
+              valueFrom: { secretKeyRef: { name: apikey-reader, key: api_key } }
+            - name: WRITER_KEY
+              valueFrom: { secretKeyRef: { name: apikey-writer, key: api_key } }
+            - name: ADMIN_KEY
+              valueFrom: { secretKeyRef: { name: apikey-admin, key: api_key } }
+            - name: HOST
+              value: {{ .Values.host | quote }}
+            - name: GW
+              value: {{ printf "%s.%s.svc.cluster.local" .Values.gateway.name .Values.gateway.namespace | quote }}
+            - name: INTERVAL
+              value: {{ .Values.trafficGenerator.intervalSeconds | quote }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "traffic-generator -> https://$HOST via $GW (every ${INTERVAL}s)";
+              # --connect-to keeps SNI/Host = $HOST but dials the gateway service.
+              C="curl -sk -o /dev/null -w %{http_code} --connect-to $HOST:443:$GW:443 --max-time 8";
+              while true; do
+                p=$($C https://$HOST/public);
+                r=$($C -H "Authorization: APIKEY $READER_KEY" https://$HOST/api/read);
+                w=$($C -X POST -H "Authorization: APIKEY $WRITER_KEY" https://$HOST/api/write);
+                a=$($C -X DELETE -H "Authorization: APIKEY $ADMIN_KEY" https://$HOST/api/admin);
+                e1=$($C -X POST -H "Authorization: APIKEY $READER_KEY" https://$HOST/api/write);
+                e2=$($C -X DELETE -H "Authorization: APIKEY $WRITER_KEY" https://$HOST/api/admin);
+                n=$($C https://$HOST/api/read);
+                b=$($C -H "Authorization: APIKEY nope" https://$HOST/api/read);
+                echo "public=$p reader_read=$r writer_write=$w admin_admin=$a | esc_write=$e1 esc_admin=$e2 nokey=$n bad=$b";
+                sleep "${INTERVAL:-2}";
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+{{- end }}
