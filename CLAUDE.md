@@ -19,7 +19,7 @@ The `oc`/`kubectl`/Helm tooling and read-only **kubernetes** MCP target an OpenS
 - **GitOps**: ArgoCD via the OpenShift GitOps operator (**RHGitOps**)
 - **Connectivity**: Red Hat Connectivity Link operators installed
 
-Assume these CRDs/APIs are available when reasoning about manifests; prefer GitOps (ArgoCD) workflows over imperative `oc apply` for cluster changes.
+Assume these CRDs/APIs are available when reasoning about manifests.
 
 ## Installed Tools
 
@@ -30,6 +30,12 @@ Assume these CRDs/APIs are available when reasoning about manifests; prefer GitO
 | **Cloud/K8s** | kubectl, Helm 4, oc (OpenShift client)                             |
 | **Git**       | gh CLI, git-delta, pre-commit                                      |
 | **Security**  | TruffleHog (pre-commit hook + CI workflow)                         |
+
+## Deployment Conventions
+
+- **GitOps only**: All cluster deployments **must** go through ArgoCD following GitOps conventions and patterns. Do **not** apply changes imperatively (`oc apply` / `kubectl apply` / `helm install`) against the cluster — commit declarative artifacts and let ArgoCD reconcile.
+- **Repo layout**: All ArgoCD artifacts — manifests, `Application`/`ApplicationSet` definitions, charts, values — live under **`/workspace/src`**.
+- **Helm-first**: Package workloads as **Helm charts** wherever possible; treat Helm as the standard. Fall back to raw manifests (or Kustomize) only when a chart genuinely doesn't fit.
 
 ## MCP Servers
 
